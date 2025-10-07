@@ -1,0 +1,447 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Scribble Clone Game Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 16px; max-width: 1400px; margin: 0 auto; }
+    .container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .section { border: 1px solid #ddd; margin: 10px 0; padding: 15px; border-radius: 5px; background: #f9f9f9; }
+    .section h3 { margin-top: 0; color: #333; background: #e0e0e0; padding: 8px; margin: -15px -15px 10px -15px; }
+    input, button, textarea, select { margin: 4px; padding: 8px; border: 1px solid #ccc; border-radius: 3px; }
+    button { background: #007cba; color: white; border: none; cursor: pointer; font-weight: bold; }
+    button:hover { background: #005a87; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    .row { display: flex; gap: 8px; align-items: center; margin: 5px 0; }
+    .row > * { flex: 1; }
+    #log { height: 200px; overflow: auto; border: 1px solid #ccc; padding: 8px; white-space: pre-wrap; background: #fff; font-family: monospace; font-size: 12px; }
+    .canvas-container { border: 2px solid #333; display: inline-block; margin: 10px 0; }
+    #canvas { border: 1px solid #999; cursor: crosshair; display: block; }
+    .color-btn { width: 30px; height: 30px; border: 2px solid #000; cursor: pointer; margin: 2px; display: inline-block; }
+    .color-btn.active { border: 3px solid #ff0000; }
+    #gameState { background: #e8f4f8; padding: 10px; border: 1px solid #b0d4e8; border-radius: 3px; margin: 10px 0; font-weight: bold; }
+    #scores { background: #f0f8e8; padding: 10px; border: 1px solid #c8e0b8; border-radius: 3px; }
+    .status { padding: 5px 10px; border-radius: 3px; font-weight: bold; }
+    .connected { background: #d4edda; color: #155724; }
+    .disconnected { background: #f8d7da; color: #721c24; }
+    .drawer-word { background: #fff3cd; color: #856404; padding: 10px; border-radius: 3px; font-size: 18px; text-align: center; }
+  </style>
+</head>
+<body>
+  <h1>🎨 Scribble Clone Game Test</h1>
+
+  <div class="container">
+    <!-- Left Column -->
+    <div>
+      <!-- Connection -->
+      <div class="section">
+        <h3>🔌 Connection</h3>
+        <div class="row">
+          <input id="serverUrl" value="http://localhost:3000" placeholder="Server URL" />
+          <input id="jwtToken" placeholder="JWT Token" style="flex: 2;" />
+        </div>
+        <div class="row">
+          <button id="connectBtn">Connect</button>
+          <button id="disconnectBtn" disabled>Disconnect</button>
+          <span id="status" class="status disconnected">Disconnected</span>
+        </div>
+      </div>
+
+      <!-- Room Management -->
+      <div class="section">
+        <h3>🏠 Room Management</h3>
+        <div class="row">
+          <input id="roomName" placeholder="Room Name" value="testRoom" />
+          <button id="joinRoomBtn" disabled>Join Room</button>
+          <button id="leaveRoomBtn" disabled>Leave Room</button>
+        </div>
+        <div id="currentRoom">Not in any room</div>
+      </div>
+
+      <!-- Game Controls -->
+      <div class="section">
+        <h3>🎮 Game Controls</h3>
+        <div class="row">
+          <button id="startGameBtn" disabled>Start Game</button>
+        </div>
+        <div id="gameState">Game not started</div>
+        <div id="drawerWord" class="drawer-word" style="display: none;"></div>
+      </div>
+
+      <!-- Scores -->
+      <div class="section">
+        <h3>🏆 Scores</h3>
+        <div id="scores">No game in progress</div>
+      </div>
+
+      <!-- Chat & Guessing -->
+      <div class="section">
+        <h3>💬 Chat & Guessing</h3>
+        <div class="row">
+          <input id="chatMessage" placeholder="Type message or guess..." />
+          <label><input type="checkbox" id="isGuess" /> Guess</label>
+          <button id="sendChatBtn" disabled>Send</button>
+        </div>
+        <div id="chatLog" style="height: 150px; overflow: auto; border: 1px solid #ccc; padding: 8px; background: white; font-size: 14px;"></div>
+      </div>
+    </div>
+
+    <!-- Right Column -->
+    <div>
+      <!-- Drawing Canvas -->
+      <div class="section">
+        <h3>🎨 Drawing Canvas</h3>
+        <div style="margin: 10px 0;">
+          <div class="color-btn active" style="background: black;" data-color="black"></div>
+          <div class="color-btn" style="background: red;" data-color="red"></div>
+          <div class="color-btn" style="background: blue;" data-color="blue"></div>
+          <div class="color-btn" style="background: green;" data-color="green"></div>
+          <div class="color-btn" style="background: yellow;" data-color="yellow"></div>
+          <div class="color-btn" style="background: orange;" data-color="orange"></div>
+          <div class="color-btn" style="background: purple;" data-color="purple"></div>
+          <div class="color-btn" style="background: brown;" data-color="brown"></div>
+        </div>
+        <div style="margin: 10px 0;">
+          <label>Brush Size: </label>
+          <input type="range" id="brushSize" min="1" max="20" value="3" style="width: 150px;" />
+          <span id="sizeDisplay">3</span>
+        </div>
+        <div class="canvas-container">
+          <canvas id="canvas" width="500" height="400"></canvas>
+        </div>
+        <div class="row">
+          <button id="clearBtn" disabled>Clear Canvas</button>
+          <button id="undoBtn" disabled>Undo</button>
+        </div>
+      </div>
+
+      <!-- Event Log -->
+      <div class="section">
+        <h3>📋 Event Log</h3>
+        <div id="log"></div>
+        <button onclick="document.getElementById('log').textContent = ''; document.getElementById('chatLog').textContent = ''">Clear All Logs</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script>
+    // Elements
+    const connectBtn = document.getElementById('connectBtn');
+    const disconnectBtn = document.getElementById('disconnectBtn');
+    const status = document.getElementById('status');
+    const logEl = document.getElementById('log');
+    const chatLog = document.getElementById('chatLog');
+    
+    const joinRoomBtn = document.getElementById('joinRoomBtn');
+    const leaveRoomBtn = document.getElementById('leaveRoomBtn');
+    const roomNameInput = document.getElementById('roomName');
+    const currentRoomEl = document.getElementById('currentRoom');
+    
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const clearBtn = document.getElementById('clearBtn');
+    const undoBtn = document.getElementById('undoBtn');
+    const brushSize = document.getElementById('brushSize');
+    const sizeDisplay = document.getElementById('sizeDisplay');
+    
+    const sendChatBtn = document.getElementById('sendChatBtn');
+    const chatMessage = document.getElementById('chatMessage');
+    const isGuess = document.getElementById('isGuess');
+    
+    const startGameBtn = document.getElementById('startGameBtn');
+    const gameState = document.getElementById('gameState');
+    const drawerWord = document.getElementById('drawerWord');
+    const scoresEl = document.getElementById('scores');
+
+    let socket = null;
+    let isDrawing = false;
+    let currentColor = 'black';
+    let currentRoom = '';
+    let isMyTurn = false;
+
+    // Logging
+    function log(...args) {
+      const line = args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : a).join(' ');
+      logEl.textContent += `[${new Date().toLocaleTimeString()}] ${line}\n`;
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log(...args);
+    }
+
+    function chatLog_add(message, type = 'info') {
+      const colors = { info: '#333', guess: '#0066cc', correct: '#22aa22', system: '#666', error: '#cc0000' };
+      chatLog.innerHTML += `<div style="color: ${colors[type]}; margin: 2px 0;">[${new Date().toLocaleTimeString()}] ${message}</div>`;
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    // Connection
+    connectBtn.addEventListener('click', () => {
+      const url = document.getElementById('serverUrl').value;
+      const token = document.getElementById('jwtToken').value;
+      
+      if (!token) {
+        alert('JWT Token required. Get one by logging in through your auth API.');
+        return;
+      }
+
+      socket = io(url, {
+        auth: { token },
+        transports: ['websocket']
+      });
+
+      socket.on('connect', () => {
+        log('Connected', socket.id);
+        status.textContent = 'Connected';
+        status.className = 'status connected';
+        connectBtn.disabled = true;
+        disconnectBtn.disabled = false;
+        joinRoomBtn.disabled = false;
+      });
+
+      socket.on('connect_error', (err) => {
+        log('Connect error:', err.message);
+        status.textContent = 'Connection failed: ' + err.message;
+        status.className = 'status disconnected';
+      });
+
+      socket.on('disconnect', () => {
+        log('Disconnected');
+        status.textContent = 'Disconnected';
+        status.className = 'status disconnected';
+        connectBtn.disabled = false;
+        disconnectBtn.disabled = true;
+        resetUI();
+      });
+
+      // Game Events
+      socket.on('notification', (msg) => {
+        log('Notification:', msg);
+        chatLog_add(msg, 'system');
+      });
+
+      socket.on('yourTurn', (data) => {
+        log('Your turn! Word:', data.word);
+        isMyTurn = true;
+        drawerWord.textContent = `Your word: ${data.word}`;
+        drawerWord.style.display = 'block';
+        gameState.textContent = 'YOUR TURN TO DRAW!';
+        gameState.style.background = '#fff3cd';
+        chatLog_add(`🎨 Your turn! Draw: ${data.word}`, 'system');
+      });
+
+      socket.on('roundStart', (data) => {
+        log('Round started:', data);
+        isMyTurn = false;
+        drawerWord.style.display = 'none';
+        gameState.textContent = `Round ${data.round} - ${data.drawer} is drawing (${data.wordLength} letters)`;
+        gameState.style.background = '#e8f4f8';
+        chatLog_add(`🎯 Round ${data.round} started! ${data.drawer} is drawing (${data.wordLength} letters)`, 'system');
+      });
+
+      socket.on('correctGuess', (data) => {
+        log('Correct guess!', data);
+        chatLog_add(`✅ ${data.username} guessed correctly! Word: ${data.word} (+${data.points} points)`, 'correct');
+      });
+
+      socket.on('roundEnd', (data) => {
+        log('Round ended. Word was:', data.word);
+        chatLog_add(`⏰ Round ended! The word was: ${data.word}`, 'system');
+        updateScores(data.scores);
+      });
+
+      socket.on('gameEnd', (data) => {
+        log('Game ended. Winner:', data.winner);
+        gameState.textContent = `🏆 Game Over! Winner: ${data.winner.username} (${data.winner.score} points)`;
+        gameState.style.background = '#d4edda';
+        drawerWord.style.display = 'none';
+        chatLog_add(`🏆 Game Over! Winner: ${data.winner.username}`, 'system');
+        updateScores(data.finalScores);
+      });
+
+      socket.on('message', (data) => {
+        log('Message:', data);
+        const type = data.isGuess ? 'guess' : 'info';
+        chatLog_add(`${data.username}: ${data.message}`, type);
+      });
+
+      socket.on('DrawingAction', (data) => {
+        handleRemoteDrawing(data);
+      });
+    });
+
+    disconnectBtn.addEventListener('click', () => {
+      if (socket) {
+        socket.disconnect();
+        socket = null;
+      }
+    });
+
+    function resetUI() {
+      joinRoomBtn.disabled = true;
+      leaveRoomBtn.disabled = true;
+      sendChatBtn.disabled = true;
+      clearBtn.disabled = true;
+      undoBtn.disabled = true;
+      startGameBtn.disabled = true;
+      currentRoom = '';
+      currentRoomEl.textContent = 'Not in any room';
+      gameState.textContent = 'Game not started';
+      scoresEl.textContent = 'No game in progress';
+      drawerWord.style.display = 'none';
+    }
+
+    // Room management
+    joinRoomBtn.addEventListener('click', () => {
+      const roomName = roomNameInput.value.trim();
+      if (!roomName || !socket) return;
+      
+      currentRoom = roomName;
+      socket.emit('joinRoom', roomName);
+      log('Joining room:', roomName);
+      
+      currentRoomEl.textContent = `In room: ${roomName}`;
+      leaveRoomBtn.disabled = false;
+      sendChatBtn.disabled = false;
+      clearBtn.disabled = false;
+      undoBtn.disabled = false;
+      startGameBtn.disabled = false;
+    });
+
+    leaveRoomBtn.addEventListener('click', () => {
+      if (!currentRoom || !socket) return;
+      
+      socket.emit('leaveRoom', currentRoom);
+      log('Leaving room:', currentRoom);
+      
+      currentRoom = '';
+      currentRoomEl.textContent = 'Not in any room';
+      leaveRoomBtn.disabled = true;
+      sendChatBtn.disabled = true;
+      clearBtn.disabled = true;
+      undoBtn.disabled = true;
+      startGameBtn.disabled = true;
+    });
+
+    // Drawing
+    let lastX = 0, lastY = 0;
+    let paths = [];
+
+    canvas.addEventListener('mousedown', (e) => {
+      isDrawing = true;
+      [lastX, lastY] = [e.offsetX, e.offsetY];
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!isDrawing || !socket || !currentRoom) return;
+      
+      const x = e.offsetX;
+      const y = e.offsetY;
+      
+      drawLine(lastX, lastY, x, y, currentColor, brushSize.value);
+      
+      // Emit drawing action
+      socket.emit('DrawingAction', {
+        roomName: currentRoom,
+        type: 'draw',
+        x, y,
+        lastX, lastY,
+        color: currentColor,
+        lineWidth: brushSize.value
+      });
+      
+      [lastX, lastY] = [x, y];
+    });
+
+    canvas.addEventListener('mouseup', () => {
+      if (isDrawing) {
+        paths.push('end');
+        isDrawing = false;
+      }
+    });
+
+    function drawLine(x1, y1, x2, y2, color, width) {
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    }
+
+    function handleRemoteDrawing(data) {
+      const { type, x, y, lastX, lastY, color, lineWidth } = data;
+      if (type === 'draw') {
+        drawLine(lastX, lastY, x, y, color, lineWidth);
+      }
+    }
+
+    // Color selection
+    document.querySelectorAll('.color-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentColor = btn.dataset.color;
+        document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+
+    brushSize.addEventListener('input', () => {
+      sizeDisplay.textContent = brushSize.value;
+    });
+
+    clearBtn.addEventListener('click', () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      paths = [];
+    });
+
+    undoBtn.addEventListener('click', () => {
+      // Simple undo - just clear for now
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+
+    // Chat
+    sendChatBtn.addEventListener('click', sendMessage);
+    chatMessage.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+
+    function sendMessage() {
+      const message = chatMessage.value.trim();
+      if (!message || !socket || !currentRoom) return;
+      
+      socket.emit('message', {
+        roomName: currentRoom,
+        message,
+        isGuess: isGuess.checked
+      });
+      
+      chatMessage.value = '';
+    }
+
+    // Game controls
+    startGameBtn.addEventListener('click', () => {
+      if (!socket || !currentRoom) return;
+      socket.emit('startGame', currentRoom);
+      log('Starting game in room:', currentRoom);
+      startGameBtn.disabled = true;
+    });
+
+    function updateScores(players) {
+      scoresEl.innerHTML = '<h4>Scores:</h4>' + 
+        players.map(p => `<div>${p.username}: ${p.score} points</div>`).join('');
+    }
+
+    // Auto-load token
+    window.addEventListener('load', () => {
+      const savedToken = localStorage.getItem('socket_token');
+      if (savedToken) {
+        document.getElementById('jwtToken').value = savedToken;
+      }
+    });
+
+    document.getElementById('jwtToken').addEventListener('change', (e) => {
+      localStorage.setItem('socket_token', e.target.value);
+    });
+  </script>
+</body>
+</html>

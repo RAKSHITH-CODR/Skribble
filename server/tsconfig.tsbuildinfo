@@ -1,0 +1,1 @@
+{"root":["./src/sockets.ts","./src/index.ts","./src/controllers/authcontroller.ts","./src/controllers/roomcontroller.ts","./src/db/init.ts","./src/db/models/roomschema.ts","./src/db/models/userschema.ts","./src/middlewares/middleware.ts","./src/routes/authroutes.ts","./src/routes/roomroutes.ts"],"version":"5.9.3"}
