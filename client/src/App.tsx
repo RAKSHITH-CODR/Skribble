@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { BrowserRouter, Routes, Route} from 'react-router-dom'
 import './App.css'
 import LoginPage from './pages/LoginPage'
@@ -17,10 +16,9 @@ function App() {
         
          <Route path='/' element={<ProtectedRoutes><DashBoard /></ProtectedRoutes>} />
          <Route path='/dashboard' element={<ProtectedRoutes><DashBoard /></ProtectedRoutes>} />
-         {/* Add other protected routes here */}
       </Routes>
     </BrowserRouter>
   )
 }
 
-export default App
+export default App;

@@ -72,14 +72,3 @@ export async function getAllRooms(req: Request, res: Response){
         return res.status(500).json({ message: "Internal server error" });
     }
 }
-
-export async function getMyRooms(req: Request, res: Response){
-    try {
-        const userId = req.body.userId;
-        const rooms = await RoomSchemaModel.find({ownerId : userId}).populate("players", "-password").populate("ownerId", "-password").populate("drawer", "-password");
-        return res.status(200).json({ message: "Rooms fetched successfully", rooms, success: true });
-    }catch (err) {
-        console.log(err);
-        return res.status(500).json({ message: "Internal server error" });
-    }
-}
