@@ -62,7 +62,7 @@ A real-time multiplayer drawing and guessing game built with React, TypeScript, 
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/GodCoder077/Skribble.git
+git clone https://github.com/RAKSHITH-CODR/Skribble.git
 cd Skribble
 ```
 
