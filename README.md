@@ -300,7 +300,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 👨‍💻 Author
 
 **GodCoder077**
-- GitHub: [@GodCoder077](https://github.com/GodCoder077)
+- GitHub: [@GodCoder077](https://github.com/RAKSHITH-CODR)
 
 **RAGHUTTAMA-DEV**
 - GitHub: [@RAGHUTTAMA-DEV](https://github.com/RAGHUTTAMA-DEV)
